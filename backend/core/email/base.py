@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict
+from django.conf import settings
 
 
 class EmailSender(ABC):
@@ -35,3 +36,38 @@ class EmailSender(ABC):
             True if sent successfully, otherwise raise EmailSendError
         """
         pass
+
+    def _get_smtp_config(self, user=None):
+        """
+        Get SMTP configuration for a user.
+        ONLY uses user's own EmailCredential - NO fallback to Brevo/global settings.
+        Raises EmailSendError if user has no verified credential.
+        """
+        if not user:
+            from core.exceptions import EmailSendError
+            raise EmailSendError("User required for sending email")
+        
+        if not hasattr(user, 'email_credential'):
+            from core.exceptions import EmailSendError
+            raise EmailSendError("No email credential configured. Please add your Gmail App Password in Email Settings.")
+        
+        try:
+            credential = user.email_credential
+            if not credential or not credential.is_verified:
+                from core.exceptions import EmailSendError
+                raise EmailSendError("Email credential not verified. Please verify in Email Settings.")
+            
+            from core.crypto import decrypt
+            return {
+                'host': credential.smtp_host,
+                'port': credential.smtp_port,
+                'username': credential.email,
+                'password': decrypt(credential.encrypted_password),
+                'use_tls': True,
+                'from_email': credential.email,
+            }
+        except EmailSendError:
+            raise
+        except Exception as e:
+            from core.exceptions import EmailSendError
+            raise EmailSendError(f"Failed to load email credential: {str(e)}")

@@ -1,42 +1,31 @@
 // frontend/js/core/auth.js
 
-import { apiRequest } from "./api.js";
-import { showToast } from "./toast.js";
+import { api, clearSession } from "./api.js";
 
 export function isLoggedIn() {
   return !!localStorage.getItem("access_token");
 }
 
-export function logout() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-  localStorage.removeItem("user");
-  window.location.reload();
+export function getCurrentUser() {
+  const raw = localStorage.getItem("user");
+  return raw ? JSON.parse(raw) : null;
 }
 
 export async function login(username, password) {
-  const data = await apiRequest("/auth/login/", {
-    method: "POST",
-    body: { username, password },
-  });
+  const data = await api.post("/auth/login/", { username, password }, { skipAuthRefresh: true });
 
   localStorage.setItem("access_token", data.access);
   localStorage.setItem("refresh_token", data.refresh);
-  if (data.user) {
-    localStorage.setItem("user", JSON.stringify(data.user));
-  }
+  localStorage.setItem("user", JSON.stringify(data.user));
 
-  return data;
+  return data.user;
 }
 
-export async function register(formData) {
-  return apiRequest("/auth/register/", {
-    method: "POST",
-    body: formData,
-  });
+export async function register(payload) {
+  return api.post("/auth/register/", payload, { skipAuthRefresh: true });
 }
 
-export function getCurrentUser() {
-  const user = localStorage.getItem("user");
-  return user ? JSON.parse(user) : null;
+export function logout() {
+  clearSession();
+  window.location.hash = "/login";
 }

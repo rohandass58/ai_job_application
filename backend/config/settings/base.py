@@ -12,21 +12,21 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-
+from decouple import config, Csv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9lsw0cd2&zrlw^6%56_=dx2@1o6saf##!in6#*qjrvq9h0yjn9'
+SECRET_KEY = config("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=Csv())
 
 
 # Application definition
@@ -39,6 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
+    'core',
     'apps.accounts',
     'apps.applications',
     'apps.job_posts',
@@ -47,6 +50,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -137,29 +141,42 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "DEFAULT_THROTTLE_RATES": {
+        "ai": "20/hour",
+    },
 }
-
-DEFAULT_LLM_PROVIDER = "gemini"   # or "groq"
-GEMINI_API_KEY = ""               # we will load from .env later
-GROQ_API_KEY = ""
-
-# ======================
-# Email Settings
-# ======================
-DEFAULT_EMAIL_PROVIDER = "smtp"
-DEFAULT_FROM_EMAIL = "noreply@yourapp.com"   # change later
-
-# SMTP (works with Gmail App Password / Brevo / etc.)
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"                # or smtp-relay.brevo.com
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = ""                         # your email
-EMAIL_HOST_PASSWORD = ""                     # app password
 
 AUTH_USER_MODEL = "accounts.User"
 
+# ======================
+# CORS
+# ======================
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
 
+# ======================
+# AI Providers
+# ======================
+DEFAULT_LLM_PROVIDER = config("DEFAULT_LLM_PROVIDER", default="gemini")
+GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
+GROQ_API_KEY = config("GROQ_API_KEY", default="")
+
+# ======================
+# Email
+# ======================
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = True
+
+# Platform-level fallback (Brevo). Used when a user has no Gmail App Password.
+BREVO_SMTP_HOST = config("BREVO_SMTP_HOST", default="smtp-relay.brevo.com")
+BREVO_SMTP_PORT = config("BREVO_SMTP_PORT", default=587, cast=int)
+BREVO_SMTP_USER = config("BREVO_SMTP_USER", default="")
+BREVO_SMTP_PASSWORD = config("BREVO_SMTP_PASSWORD", default="")
+
+# Used to encrypt users' own SMTP passwords at rest
+FIELD_ENCRYPTION_KEY = config("FIELD_ENCRYPTION_KEY", default="")
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
@@ -168,5 +185,3 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
-GEMINI_API_KEY = "your-actual-gemini-api-key-here"
-GROQ_API_KEY = "your-groq-api-key-here"

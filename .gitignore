@@ -1,5 +1,4 @@
-@('
-# Python & Django rules
+# Python & Django
 __pycache__/
 *.py[cod]
 *$py.class
@@ -15,4 +14,13 @@ ENV/
 # Media and Static assets
 media/
 staticfiles/
-') | Out-File -FilePath backend/.gitignore -Encoding utf8
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

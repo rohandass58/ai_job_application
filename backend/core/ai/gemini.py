@@ -24,7 +24,6 @@ class GeminiProvider(LLMProvider):
             raise AIProviderError("GEMINI_API_KEY is not set in settings")
 
         self.client = genai.Client(api_key=api_key)
-        # Fast + cheap vision model
         self.model_name = "gemini-2.5-flash"
 
     def extract_jd(

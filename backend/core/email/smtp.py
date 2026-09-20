@@ -1,7 +1,7 @@
 # backend/core/email/smtp.py
 
 from typing import List, Optional, Dict
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMessage, get_connection
 from django.conf import settings
 from .base import EmailSender
 from core.exceptions import EmailSendError
@@ -13,6 +13,9 @@ class SMTPEmailSender(EmailSender):
     Works with Gmail App Password, Brevo SMTP, etc.
     """
 
+    def __init__(self, user=None):
+        self.user = user
+
     def send(
         self,
         to_email: str,
@@ -23,7 +26,19 @@ class SMTPEmailSender(EmailSender):
         attachments: Optional[List[Dict]] = None,
     ) -> bool:
         try:
-            from_email = f"{from_name} <{settings.DEFAULT_FROM_EMAIL}>"
+            # Get SMTP config based on user credentials
+            smtp_config = self._get_smtp_config(self.user)
+
+            # Create email connection with user-specific credentials
+            connection = get_connection(
+                host=smtp_config['host'],
+                port=smtp_config['port'],
+                username=smtp_config['username'],
+                password=smtp_config['password'],
+                use_tls=smtp_config['use_tls'],
+            )
+
+            from_email = f"{from_name} <{smtp_config.get('from_email', smtp_config['username'])}>"
 
             email = EmailMessage(
                 subject=subject,
@@ -31,6 +46,7 @@ class SMTPEmailSender(EmailSender):
                 from_email=from_email,
                 to=[to_email],
                 reply_to=[reply_to] if reply_to else None,
+                connection=connection,
             )
 
             # Attach files if any

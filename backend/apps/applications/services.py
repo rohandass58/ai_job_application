@@ -7,8 +7,11 @@ from core.exceptions import ValidationError, AIProviderError, EmailSendError
 from apps.job_posts.models import JobPost
 from apps.resumes.models import Resume
 from .models import Application
+import logging
 
+from django.utils import timezone
 
+logger = logging.getLogger(__name__)
 class ApplicationService:
 
     @staticmethod
@@ -56,7 +59,7 @@ class ApplicationService:
 
         resume_summary = ""
         if application.resume and application.resume.extracted_text:
-            resume_summary = application.resume.extracted_text[:1500]
+            resume_summary = application.resume.extracted_text[:5000]
 
         try:
             provider = get_llm_provider("groq")
@@ -76,8 +79,8 @@ class ApplicationService:
 
     @staticmethod
     def send_application(application: Application) -> Application:
-        if application.status not in ["ready", "draft"]:
-            raise ValidationError("Application is not in a sendable state")
+        if application.status not in ["ready", "draft", "failed"]:
+            raise ValidationError("This application was already sent")
 
         if not application.to_email:
             raise ValidationError("No recipient email found")
@@ -86,7 +89,7 @@ class ApplicationService:
             raise ValidationError("Subject or body is empty")
 
         try:
-            sender = get_email_sender()
+            sender = get_email_sender(user=application.user)
             from_name = application.user.get_full_name() or application.user.username
 
             sender.send(
@@ -95,6 +98,7 @@ class ApplicationService:
                 body=application.body,
                 from_name=from_name,
                 reply_to=application.user.email,
+                attachments=ApplicationService._resume_attachments(application),
             )
 
             application.status = "sent"
@@ -108,3 +112,28 @@ class ApplicationService:
             application.error_message = str(e)
             application.save()
             raise EmailSendError(f"Failed to send email: {str(e)}")
+
+    @staticmethod
+    def _resume_attachments(application: Application) -> list:
+        """
+        Attach the chosen resume PDF. If the file is missing on disk we still
+        send the email (without attachment) instead of failing the whole send.
+        """
+        resume = application.resume
+        if not resume or not resume.file:
+            return []
+
+        try:
+            resume.file.open("rb")
+            content = resume.file.read()
+        except Exception:
+            logger.warning("Resume file unreadable for application id=%s", application.id)
+            return []
+        finally:
+            try:
+                resume.file.close()
+            except Exception:
+                pass
+
+        name = f"{application.user.get_full_name() or application.user.username} - Resume.pdf"
+        return [{"filename": name, "content": content, "mimetype": "application/pdf"}]

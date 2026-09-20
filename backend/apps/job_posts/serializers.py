@@ -2,9 +2,13 @@
 
 from rest_framework import serializers
 from .models import JobPost
+from core.validators import validate_image_file
+
 
 
 class JobPostSerializer(serializers.ModelSerializer):
+    screenshot = serializers.ImageField(validators=[validate_image_file])
+
     class Meta:
         model = JobPost
         fields = (

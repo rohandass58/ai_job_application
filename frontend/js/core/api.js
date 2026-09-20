@@ -1,36 +1,128 @@
 // frontend/js/core/api.js
 
-const API_BASE = "http://localhost:8000/api";   // change later for production
+// Auto-detect API base URL
+const API_BASE = (() => {
+  const hostname = window.location.hostname;
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "http://localhost:8000/api";
+  }
+  // Production: same origin or Railway backend
+  // If frontend is on Netlify (jobapply.netlify.app), backend is on Railway (jobapply.up.railway.app)
+  // You can also set VITE_API_BASE at build time if needed
+  return `https://${hostname.replace("netlify.app", "up.railway.app")}/api`;
+})();
 
-async function apiRequest(endpoint, options = {}) {
-  const token = localStorage.getItem("access_token");
+const TOKEN_KEYS = {
+  access: "access_token",
+  refresh: "refresh_token",
+  user: "user",
+};
+
+export function clearSession() {
+  Object.values(TOKEN_KEYS).forEach((k) => localStorage.removeItem(k));
+}
+
+// ---- Token refresh (single-flight) ----
+let refreshPromise = null;
+
+async function refreshAccessToken() {
+  // If a refresh is already running, reuse it (avoid parallel refresh calls,
+  // which would break with ROTATE_REFRESH_TOKENS + blacklist)
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refresh = localStorage.getItem(TOKEN_KEYS.refresh);
+    if (!refresh) throw new Error("No refresh token");
+
+    const res = await fetch(`${API_BASE}/auth/token/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) throw new Error("Refresh failed");
+
+    localStorage.setItem(TOKEN_KEYS.access, json.data.access);
+    // ROTATE_REFRESH_TOKENS=True -> server sends a new refresh token too
+    if (json.data.refresh) {
+      localStorage.setItem(TOKEN_KEYS.refresh, json.data.refresh);
+    }
+    return json.data.access;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+// ---- Core request ----
+async function rawRequest(endpoint, options, token) {
+  const isForm = options.body instanceof FormData;
 
   const headers = {
-    ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(isForm ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
-  const config = {
-    ...options,
-    headers,
-  };
-
-  if (options.body && !(options.body instanceof FormData)) {
+  const config = { ...options, headers };
+  if (options.body && !isForm) {
     config.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, config);
-  const data = await response.json();
-
-  if (!response.ok || data.success === false) {
-    const error = new Error(data.message || "Something went wrong");
-    error.errors = data.errors;
-    error.status = response.status;
-    throw error;
-  }
-
-  return data;
+  return fetch(`${API_BASE}${endpoint}`, config);
 }
 
-export { apiRequest };
+export async function apiRequest(endpoint, options = {}) {
+  let token = localStorage.getItem(TOKEN_KEYS.access);
+  let response;
+
+  try {
+    response = await rawRequest(endpoint, options, token);
+
+    // Access token expired -> refresh once and retry
+    if (response.status === 401 && !options.skipAuthRefresh) {
+      try {
+        token = await refreshAccessToken();
+        response = await rawRequest(endpoint, options, token);
+      } catch {
+        clearSession();
+        window.location.hash = "/login";
+        throw makeError("Session expired. Please login again.", 401);
+      }
+    }
+  } catch (err) {
+    if (err.status) throw err; // already a formatted error
+    throw makeError("Cannot reach server. Check your connection.", 0);
+  }
+
+  const json = await response.json().catch(() => null);
+
+  if (!json) {
+    throw makeError("Unexpected server response", response.status);
+  }
+
+  if (!response.ok || json.success === false) {
+    throw makeError(json.message || "Something went wrong", response.status, json.errors);
+  }
+
+  return json; // { success, message, data, errors }
+}
+
+function makeError(message, status, errors = null) {
+  const error = new Error(message);
+  error.status = status;
+  error.errors = errors;
+  return error;
+}
+
+// Convenience helpers -> return json.data directly
+export const api = {
+  get: (url, opts) => apiRequest(url, { ...opts, method: "GET" }).then((r) => r.data),
+  post: (url, body, opts) => apiRequest(url, { ...opts, method: "POST", body }).then((r) => r.data),
+  patch: (url, body, opts) => apiRequest(url, { ...opts, method: "PATCH", body }).then((r) => r.data),
+  upload: (url, formData, opts) => apiRequest(url, { ...opts, method: "POST", body: formData }).then((r) => r.data),
+};

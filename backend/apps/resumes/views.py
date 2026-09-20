@@ -5,6 +5,7 @@ from core.views import BaseAPIView
 from core.exceptions import ValidationError
 from .models import Resume
 from .serializers import ResumeSerializer
+from .services import ResumeService
 
 
 class ResumeUploadView(BaseAPIView):
@@ -23,6 +24,7 @@ class ResumeUploadView(BaseAPIView):
             Resume.objects.filter(user=request.user, is_primary=True).update(is_primary=False)
 
         resume = serializer.save(user=request.user)
+        ResumeService.extract_text(resume)
         return self.success_response(
             data=ResumeSerializer(resume).data,
             message="Resume uploaded successfully",

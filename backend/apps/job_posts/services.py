@@ -14,21 +14,22 @@ class JobPostService:
         2. Call Gemini to extract JD
         3. Update the JobPost with extracted data
         """
+        # Read bytes from the original upload BEFORE saving: a saved FieldFile
+        # is re-opened from storage and has no content_type attribute.
+        screenshot.seek(0)
+        image_bytes = screenshot.read()
+        mime_type = getattr(screenshot, "content_type", None) or "image/jpeg"
+        screenshot.seek(0)
+
         job_post = JobPost.objects.create(
             user=user,
             screenshot=screenshot
         )
 
         try:
-            # Read image bytes
-            image_bytes = job_post.screenshot.read()
-            mime_type = job_post.screenshot.file.content_type or "image/jpeg"
-
-            # Get LLM provider (Gemini by default)
             provider = get_llm_provider("gemini")
             extracted = provider.extract_jd(image_bytes, mime_type)
 
-            # Update the job post
             job_post.company = extracted.get("company", "")
             job_post.role = extracted.get("role", "")
             job_post.skills = extracted.get("skills", [])

@@ -35,7 +35,7 @@ class ApplicationCreateView(BaseAPIView):
 
 class ApplicationListView(BaseAPIView):
     def get(self, request):
-        apps = Application.objects.filter(user=request.user)
+        apps = Application.objects.filter(user=request.user).select_related("job_post", "resume")
         serializer = ApplicationSerializer(apps, many=True)
         return self.success_response(data=serializer.data)
 
@@ -56,13 +56,16 @@ class ApplicationDetailView(BaseAPIView):
         except Application.DoesNotExist:
             raise ValidationError(message="Application not found", status_code=404)
 
+        if app.status == "sent":
+            raise ValidationError(message="Sent applications cannot be edited")
+
         serializer = ApplicationUpdateSerializer(app, data=request.data, partial=True)
         if not serializer.is_valid():
             raise ValidationError(message="Invalid data", errors=serializer.errors)
 
         serializer.save()
         app.status = "ready"
-        app.save(update_fields=["status"])
+        app.save(update_fields=["status", "updated_at"])
 
         return self.success_response(
             data=ApplicationSerializer(app).data,

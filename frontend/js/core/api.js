@@ -1,16 +1,11 @@
 // frontend/js/core/api.js
 
-// Auto-detect API base URL
-const API_BASE = (() => {
-  const hostname = window.location.hostname;
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
-    return "http://localhost:8000/api";
-  }
-  // Production: same origin or Railway backend
-  // If frontend is on Netlify (jobapply.netlify.app), backend is on Railway (jobapply.up.railway.app)
-  // You can also set VITE_API_BASE at build time if needed
-  return `https://${hostname.replace("netlify.app", "up.railway.app")}/api`;
-})();
+// Replace with your real Railway domain (Settings -> Networking). Keep https:// and /api, no trailing slash.
+const PROD_API = "https://xxxx.up.railway.app/api";
+
+const API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ? "http://localhost:8000/api"
+  : PROD_API;
 
 const TOKEN_KEYS = {
   access: "access_token",
@@ -26,7 +21,7 @@ export function clearSession() {
 let refreshPromise = null;
 
 async function refreshAccessToken() {
-  // If a refresh is already running, reuse it (avoid parallel refresh calls,
+  // If a refresh is already running, reuse it (avoids parallel refresh calls,
   // which would break with ROTATE_REFRESH_TOKENS + blacklist)
   if (refreshPromise) return refreshPromise;
 
@@ -76,6 +71,13 @@ async function rawRequest(endpoint, options, token) {
   return fetch(`${API_BASE}${endpoint}`, config);
 }
 
+function makeError(message, status, errors = null) {
+  const error = new Error(message);
+  error.status = status;
+  error.errors = errors;
+  return error;
+}
+
 export async function apiRequest(endpoint, options = {}) {
   let token = localStorage.getItem(TOKEN_KEYS.access);
   let response;
@@ -112,15 +114,10 @@ export async function apiRequest(endpoint, options = {}) {
   return json; // { success, message, data, errors }
 }
 
-function makeError(message, status, errors = null) {
-  const error = new Error(message);
-  error.status = status;
-  error.errors = errors;
-  return error;
-}
-
 // Convenience helpers -> return json.data directly
 export const api = {
+  request: (method, url, body, opts) =>
+    apiRequest(url, { ...opts, method, ...(body ? { body } : {}) }).then((r) => r.data),
   get: (url, opts) => apiRequest(url, { ...opts, method: "GET" }).then((r) => r.data),
   post: (url, body, opts) => apiRequest(url, { ...opts, method: "POST", body }).then((r) => r.data),
   patch: (url, body, opts) => apiRequest(url, { ...opts, method: "PATCH", body }).then((r) => r.data),

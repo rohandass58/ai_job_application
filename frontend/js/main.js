@@ -11,7 +11,11 @@ import { reviewScreen } from "./screens/reviewScreen.js";
 import { uploadScreen } from "./screens/uploadScreen.js";
 import { emailSettingsScreen } from "./screens/emailSettingsScreen.js";
 import { mount } from "./utils/dom.js";
+import { initPWA } from "./utils/pwa.js";
 
+
+// Initialize PWA install prompt handling
+initPWA();
 
 // Register Service Worker for PWA
 if ("serviceWorker" in navigator) {

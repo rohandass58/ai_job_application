@@ -1,149 +1,21 @@
 {
   "name": "JobApply AI",
   "short_name": "JobApply",
-  "description": "AI-powered job application assistant - Generate personalized emails from job screenshots",
+  "description": "Generate personalised job application emails from job screenshots",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#f8fafc",
   "theme_color": "#4f46e5",
-  "scope": "/",
   "lang": "en",
-  "dir": "ltr",
-  "categories": [
-    "productivity",
-    "business",
-    "utilities"
-  ],
   "icons": [
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "72x72",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "96x96",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "128x128",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "144x144",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "152x152",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "384x384",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udce7</text></svg>",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23f8fafc' width='540' height='720'/><text x='270' y='180' text-anchor='middle' font-size='32' font-weight='bold' fill='%234f46e5'>JobApply AI</text><text x='270' y='230' text-anchor='middle' font-size='18' fill='%2364748b'>AI-powered job applications</text><rect x='60' y='300' width='420' height='280' rx='16' fill='white' stroke='%23e2e8f0'/><text x='270' y='400' text-anchor='middle' font-size='16' fill='%234f46e5'>\ud83d\udcf8 Upload screenshot</text><text x='270' y='440' text-anchor='middle' font-size='14' fill='%2364748b'>Job description analyzed by AI</text><text x='270' y='470' text-anchor='middle' font-size='14' fill='%2364748b'>Personalized email generated</text><text x='270' y='500' text-anchor='middle' font-size='14' fill='%2364748b'>\ud83d\udce7 Send from your Gmail</text></svg>",
-      "sizes": "540x720",
-      "type": "image/svg+xml",
-      "form_factor": "narrow",
-      "label": "Home screen - Create new application"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23f8fafc' width='540' height='720'/><text x='270' y='180' text-anchor='middle' font-size='32' font-weight='bold' fill='%234f46e5'>JobApply AI</text><text x='270' y='230' text-anchor='middle' font-size='18' fill='%2364748b'>Review & send your email</text><rect x='60' y='300' width='420' height='280' rx='16' fill='white' stroke='%23e2e8f0'/><text x='270' y='360' text-anchor='middle' font-size='16' fill='%231e293b'>Subject: Application for Software Engineer</text><text x='270' y='400' text-anchor='middle' font-size='14' fill='%2364748b'>Hi [Hiring Manager],</text><text x='270' y='430' text-anchor='middle' font-size='14' fill='%2364748b'>I am writing to express my interest...</text><text x='270' y='480' text-anchor='middle' font-size='14' fill='%2310b981'>\ud83d\udcce Resume attached \u2022 \u2705 Ready to send</text></svg>",
-      "sizes": "540x720",
-      "type": "image/svg+xml",
-      "form_factor": "narrow",
-      "label": "Review screen - Edit and send email"
-    }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    {
-      "name": "New Application",
-      "short_name": "New App",
-      "description": "Create a new job application from screenshot",
-      "url": "/upload",
-      "icons": [
-        {
-          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udcf8</text></svg>",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "My Applications",
-      "short_name": "Applications",
-      "description": "View all your job applications",
-      "url": "/applications",
-      "icons": [
-        {
-          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udccb</text></svg>",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "Upload Resume",
-      "short_name": "Resume",
-      "description": "Upload or manage your resume",
-      "url": "/resumes",
-      "icons": [
-        {
-          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\udcc4</text></svg>",
-          "sizes": "96x96"
-        }
-      ]
-    }
-  ],
-  "prefer_related_applications": false,
-  "related_applications": [],
-  "protocol_handlers": [],
-  "file_handlers": [],
-  "share_target": {
-    "action": "/upload",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "files": [
-        {
-          "name": "screenshot",
-          "accept": [
-            "image/png",
-            "image/jpeg",
-            "image/webp"
-          ]
-        }
-      ]
-    }
-  }
+    { "name": "New Application", "short_name": "New", "url": "/#/upload", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "My Applications", "short_name": "Applications", "url": "/#/applications", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
 }

@@ -18,10 +18,15 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from core.admin_views import admin_dashboard
+
+# Use custom admin index template with dashboard button
+admin.site.index_template = "admin/dashboard_index.html"
 
 # config/urls.py
 
 urlpatterns = [
+    path("admin/dashboard/", admin_dashboard, name="admin_dashboard"),
     path("admin/", admin.site.urls),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/resumes/", include("apps.resumes.urls")),

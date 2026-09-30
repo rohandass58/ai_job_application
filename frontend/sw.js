@@ -1,11 +1,13 @@
 
 // Service Worker for JobApply AI PWA
-const CACHE_NAME = "jobapply-v1";
+const CACHE_NAME = "jobapply";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
-  "/favicon.svg",
+  "/favicon.ico",
+  "/favicon-16.png",
+  "/favicon-32.png",
   "/css/main.css",
   "/js/main.js",
   "/js/core/router.js",
@@ -14,6 +16,7 @@ const STATIC_ASSETS = [
   "/js/core/store.js",
   "/js/core/toast.js",
   "/js/utils/dom.js",
+  "/js/utils/pwa.js",
   "/js/components/bottomNav.js",
   "/js/components/pageHeader.js",
   "/js/components/loader.js",
@@ -56,7 +59,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Fetch - network first for API, cache first for static
+// Fetch - network first for everything, fallback to cache (works offline)
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -64,45 +67,16 @@ self.addEventListener("fetch", (event) => {
   // Skip non-GET requests
   if (request.method !== "GET") return;
 
-  // API requests - network first, fallback to cache
-  if (url.pathname.startsWith("/api/")) {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  // Static assets - cache first, fallback to network
+  // Network-first with no-cache, fallback to cache
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
+    fetch(request, { cache: "no-cache" })
+      .then(response => {
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(request))
   );
 });
-
-// Background sync for offline form submissions (future enhancement)
-self.addEventListener("sync", (event) => {
-  if (event.tag === "sync-applications") {
-    event.waitUntil(syncApplications());
-  }
-});
-
-async function syncApplications() {
-  // Future: sync pending applications when online
-  console.log("[SW] Background sync triggered");
-}

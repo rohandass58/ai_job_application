@@ -3,7 +3,7 @@
 let deferredPrompt = null;
 
 /**
- * Initialize PWA install prompt handling
+ * Initialize PWA install prompt handling + SW registration
  * Call this early in your app (e.g., in main.js before startRouter)
  */
 export function initPWA() {
@@ -23,6 +23,25 @@ export function initPWA() {
     hideInstallButton();
     deferredPrompt = null;
   });
+
+  // Register service worker with updateViaCache: "none"
+  if ("serviceWorker" in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+
+    navigator.serviceWorker
+      .register("./sw.js", { updateViaCache: "none" })
+      .then((reg) => reg.update())
+      .catch(() => {});
+
+    // When a new SW takes over, reload once so the user gets the new files.
+    // Skipped on the very first visit (no previous controller).
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    });
+  }
 }
 
 /**

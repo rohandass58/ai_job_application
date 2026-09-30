@@ -1,7 +1,7 @@
 // frontend/js/core/api.js
 
 // Replace with your real Railway domain (Settings -> Networking). Keep https:// and /api, no trailing slash.
-const PROD_API = "https://xxxx.up.railway.app/api";
+const PROD_API = "https://aijobapplication-production-79d1.up.railway.app/";
 
 const API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? "http://localhost:8000/api"

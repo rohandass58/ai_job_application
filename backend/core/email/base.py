@@ -37,37 +37,54 @@ class EmailSender(ABC):
         """
         pass
 
+    
     def _get_smtp_config(self, user=None):
         """
-        Get SMTP configuration for a user.
-        ONLY uses user's own EmailCredential - NO fallback to Brevo/global settings.
-        Raises EmailSendError if user has no verified credential.
+        Use application SMTP settings when no user is provided.
+        Use verified user-specific credentials when a user is provided.
         """
-        if not user:
+        if user is None:
+            from decouple import config
+
+            return {
+                "host": config("EMAIL_HOST"),
+                "port": config("EMAIL_PORT", default=587, cast=int),
+                "username": config("EMAIL_HOST_USER"),
+                "password": config("EMAIL_HOST_PASSWORD"),
+                "use_tls": config("EMAIL_USE_TLS", default=True, cast=bool),
+                "from_email": config("DEFAULT_FROM_EMAIL", default=config("EMAIL_HOST_USER")),
+            }
+
+        if not hasattr(user, "email_credential"):
             from core.exceptions import EmailSendError
-            raise EmailSendError("User required for sending email")
-        
-        if not hasattr(user, 'email_credential'):
-            from core.exceptions import EmailSendError
-            raise EmailSendError("No email credential configured. Please add your Gmail App Password in Email Settings.")
-        
+            raise EmailSendError(
+                "No email credential configured. Please add your Gmail App Password in Email Settings."
+            )
+
         try:
             credential = user.email_credential
+
             if not credential or not credential.is_verified:
                 from core.exceptions import EmailSendError
-                raise EmailSendError("Email credential not verified. Please verify in Email Settings.")
-            
+                raise EmailSendError(
+                    "Email credential not verified. Please verify in Email Settings."
+                )
+
             from core.crypto import decrypt
+
             return {
-                'host': credential.smtp_host,
-                'port': credential.smtp_port,
-                'username': credential.email,
-                'password': decrypt(credential.encrypted_password),
-                'use_tls': True,
-                'from_email': credential.email,
+                "host": credential.smtp_host,
+                "port": credential.smtp_port,
+                "username": credential.email,
+                "password": decrypt(credential.encrypted_password),
+                "use_tls": True,
+                "from_email": credential.email,
             }
-        except EmailSendError:
-            raise
+
         except Exception as e:
             from core.exceptions import EmailSendError
+
+            if isinstance(e, EmailSendError):
+                raise
+
             raise EmailSendError(f"Failed to load email credential: {str(e)}")

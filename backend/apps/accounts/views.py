@@ -65,7 +65,12 @@ class RegisterInitView(BaseAPIView):
                 errors=serializer.errors
             )
 
-        data = AccountService.initiate_registration(**serializer.validated_data)
+        # data = AccountService.initiate_registration(**serializer.validated_data)
+        data = AccountService.initiate_registration(
+            username=serializer.validated_data["username"],
+            email=serializer.validated_data["email"],
+            password=serializer.validated_data["password"],
+        )
         return self.success_response(
             data=data,
             message="Verification code sent to your email. Please check your inbox."

@@ -1,11 +1,11 @@
 // frontend/js/screens/emailSettingsScreen.js
-import { showToast } from "../core/toast.js";
 import { showConfirmModal, showPromptModal } from "../components/modal.js";
+import { showToast } from "../core/toast.js";
 
 import { bottomNav } from "../components/bottomNav.js";
 import { pageHeader } from "../components/pageHeader.js";
-import { authService } from "../services/authService.js";
 import { api } from "../core/api.js";
+import { authService } from "../services/authService.js";
 import { $, esc, mount } from "../utils/dom.js";
 
 export async function emailSettingsScreen() {
@@ -15,7 +15,7 @@ export async function emailSettingsScreen() {
   // Load current credential
   let credential = null;
   try {
-    const res = await api.get("/accounts/email-credential/");
+    const res = await api.get("/auth/email-credential/");
     credential = res.data;
   } catch (e) {
     // No credential or error
@@ -30,7 +30,7 @@ export async function emailSettingsScreen() {
         <p class="muted small" style="margin-bottom: 16px;">
           Connect your Gmail account to send application emails from your own address.
           <br>You'll need a <strong>Gmail App Password</strong> (16 characters).
-          <br><a href="https://support.google.com/accounts/answer/185833" target="_blank" class="link">How to create one?</a>
+          <br><a href="https://support.google.com/auth/answer/185833" target="_blank" class="link">How to create one?</a>
         </p>
 
         <div id="credentialForm">
@@ -122,7 +122,7 @@ async function handleSave() {
   btn.textContent = "Connecting...";
 
   try {
-    await api.post("/accounts/email-credential/", { email, password, smtp_host: "smtp.gmail.com", smtp_port: 587 });
+    await api.post("/auth/email-credential/", { email, password, smtp_host: "smtp.gmail.com", smtp_port: 587 });
     showToast("Gmail connected successfully!");
     // Reload screen
     window.location.hash = "/email-settings";
@@ -152,7 +152,7 @@ async function handleUpdate() {
   btn.textContent = "Updating...";
 
   try {
-    await api.patch("/accounts/email-credential/", { password });
+    await api.patch("/auth/email-credential/", { password });
     showToast("Updated successfully!");
     window.location.hash = "/email-settings";
   } catch (e) {
@@ -178,7 +178,7 @@ async function handleDelete() {
   btn.textContent = "Disconnecting...";
 
   try {
-    await api.delete("/accounts/email-credential/");
+    await api.delete("/auth/email-credential/");
     showToast("Disconnected");
     window.location.hash = "/email-settings";
   } catch (e) {
@@ -206,7 +206,7 @@ async function handleTest() {
   btn.textContent = "Sending...";
 
   try {
-    await api.post("/accounts/email-credential/test/", { test_email: testEmail });
+    await api.post("/auth/email-credential/test/", { test_email: testEmail });
     showToast("Test email sent! Check your inbox.");
   } catch (e) {
     showToast(e.message || "Failed to send test email", "error");

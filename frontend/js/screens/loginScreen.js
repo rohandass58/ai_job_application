@@ -50,7 +50,13 @@ export function loginScreen() {
       showToast("Welcome back!", "success");
       navigate("/home");
     } catch (err) {
-      showToast(err.message || "Login failed", "error");
+      // Check if user is not registered and redirect to register screen
+      if (err.status === 404 && err.message.includes("not registered")) {
+        showToast("User not registered. Redirecting to registration...", "info");
+        setTimeout(() => navigate("/register"), 1500);
+      } else {
+        showToast(err.message || "Login failed", "error");
+      }
       restore();
     }
   });

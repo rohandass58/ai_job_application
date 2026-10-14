@@ -1,5 +1,6 @@
 // frontend/js/screens/emailSettingsScreen.js
 import { showToast } from "../core/toast.js";
+import { showConfirmModal, showPromptModal } from "../components/modal.js";
 
 import { bottomNav } from "../components/bottomNav.js";
 import { pageHeader } from "../components/pageHeader.js";
@@ -35,7 +36,7 @@ export async function emailSettingsScreen() {
         <div id="credentialForm">
           <div class="form-group">
             <label class="form-label">Gmail Address</label>
-            <input type="email" class="form-input" id="emailInput" value="${esc(credential?.email || "")}" placeholder="your@gmail.com" ${credential ? "readonly" : ""}>
+            <input type="email" class="form-input" id="emailInput" value="${esc(credential?.email || user.email || "")}" placeholder="your@gmail.com" ${credential ? "readonly" : ""}>
           </div>
 
           <div class="form-group" id="passwordGroup" style="${credential ? "display:none" : ""}">
@@ -163,7 +164,14 @@ async function handleUpdate() {
 }
 
 async function handleDelete() {
-  if (!confirm("Disconnect Gmail? You'll need to set it up again to send from your address.")) return;
+  const confirmed = await showConfirmModal({
+    title: "Disconnect Gmail",
+    message: "You'll need to set it up again to send from your address.",
+    confirmText: "Disconnect",
+    cancelText: "Cancel",
+    type: "danger"
+  });
+  if (!confirmed) return;
 
   const btn = $("#deleteBtn");
   btn.disabled = true;
@@ -182,7 +190,15 @@ async function handleDelete() {
 }
 
 async function handleTest() {
-  const testEmail = prompt("Enter email address to send test to:", authService.currentUser()?.email || "");
+  const testEmail = await showPromptModal({
+    title: "Send Test Email",
+    message: "Enter the email address to send the test email to:",
+    placeholder: "recipient@example.com",
+    defaultValue: authService.currentUser()?.email || "",
+    confirmText: "Send",
+    cancelText: "Cancel",
+    type: "info"
+  });
   if (!testEmail) return;
 
   const btn = $("#testBtn");

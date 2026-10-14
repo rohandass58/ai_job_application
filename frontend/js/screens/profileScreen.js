@@ -3,6 +3,7 @@
 import { bottomNav } from "../components/bottomNav.js";
 import { pageHeader } from "../components/pageHeader.js";
 import { authService } from "../services/authService.js";
+import { showConfirmModal } from "../components/modal.js";
 import { $, esc, mount } from "../utils/dom.js";
 
 export function profileScreen() {
@@ -35,7 +36,14 @@ export function profileScreen() {
     ${bottomNav("/profile")}
   `);
 
-  $("#logoutBtn").onclick = () => {
-    if (confirm("Log out of your account?")) authService.logout();
+  $("#logoutBtn").onclick = async () => {
+    const confirmed = await showConfirmModal({
+      title: "Log out",
+      message: "Are you sure you want to log out of your account?",
+      confirmText: "Log out",
+      cancelText: "Cancel",
+      type: "warning"
+    });
+    if (confirmed) authService.logout();
   };
 }

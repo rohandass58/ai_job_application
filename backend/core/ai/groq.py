@@ -70,38 +70,80 @@ class GroqProvider(LLMProvider):
 
         company = jd.get("company", "the company")
         role = jd.get("role", "the role")
-        skills = ", ".join(jd.get("skills", [])[:8]) or "relevant skills"
+        required_skills = jd.get("skills", [])[:10]  # up to 10 skills from JD
 
         student_name = student_profile.get("name") or student_profile.get("first_name", "Student")
         student_email = student_profile.get("email", "")
         college = student_profile.get("college", "")
-        experience = student_profile.get("experience", "")
+
+        # Use MORE resume text (up to 8000 chars) for better context
+        resume_text = resume_summary[:8000] if resume_summary else ""
+        is_fresher = not resume_text or len(resume_text.strip()) < 200
+
+        # Build skill matching context
+        if required_skills:
+            skills_text = ", ".join(required_skills)
+        else:
+            skills_text = "relevant technical skills"
 
         system_prompt = """
 You are an expert career coach who writes short, professional, and highly personalized cold emails for job applications.
-Write in a polite, confident, and concise tone. Avoid fluff.
+Write in a polite, confident, and concise tone. Avoid fluff. Be specific, not generic.
 """
 
-        user_prompt = f"""
+        if is_fresher:
+            user_prompt = f"""
 Write a cold email for a job applicant.
 
 Job Details:
 - Company: {company}
 - Role: {role}
-- Required Skills: {skills}
+- Required Skills: {skills_text}
 
 Applicant Details:
 - Name: {student_name}
 - Email: {student_email}
 - College: {college}
-- Resume text (use only facts stated here, do not invent anything): {experience or resume_summary or "Fresher with strong fundamentals"}
+- Background: Recent graduate / Fresher with strong fundamentals
 
 Requirements:
-1. Subject line should be short and professional.
-2. Body should be 120-180 words max.
-3. From the applicant's resume, pick the 2-3 achievements or skills that best match the job's required skills, and mention them concretely (numbers if the resume has them). Do not summarise the whole resume.
-4. End with a clear call-to-action (ask for a short call or interview).
-5. Do not use placeholders like [Name]. Use real values.
+1. Subject line: Short, professional, mention role + company.
+2. Body: 150-200 words max.
+3. Since the applicant is a fresher/early career, highlight 2-3 concrete things from education/projects/internships that match the required skills. Use specific tech names, tools, or project outcomes. Do NOT summarise everything.
+4. End with a clear call-to-action (ask for a 15-min call or interview).
+5. No placeholders. Use real values.
+6. Return ONLY valid JSON in this exact format:
+{{
+  "subject": "the subject line",
+  "body": "the full email body"
+}}
+"""
+        else:
+            user_prompt = f"""
+Write a cold email for a job applicant.
+
+Job Details:
+- Company: {company}
+- Role: {role}
+- Required Skills: {skills_text}
+
+Applicant Details:
+- Name: {student_name}
+- Email: {student_email}
+- College: {college}
+- Resume facts (use ONLY these, do not invent):
+{resume_text}
+
+Requirements:
+1. Subject line: Short, professional, mention role + company.
+2. Body: 180-250 words max.
+3. From the resume facts above, pick the 3 best matches to the required skills. Mention them CONCRETELY:
+   - Specific technologies, frameworks, tools
+   - Quantifiable outcomes (e.g., "reduced latency by 40%", "led team of 4", "built API handling 10k req/day")
+   - Relevant projects or work experience
+   Do NOT write a resume summary. Pick only what matches THIS job.
+4. End with a clear call-to-action (ask for a 15-min call or interview).
+5. No placeholders. Use real values from the resume.
 6. Return ONLY valid JSON in this exact format:
 {{
   "subject": "the subject line",
@@ -134,7 +176,7 @@ Requirements:
             data = json.loads(text)
 
             return {
-                "subject": data.get("subject", f"Application for {role} at {company}"),
+                "subject": data.get("subject", f"Application for {{role}} at {{company}}"),
                 "body": data.get("body", ""),
             }
 
@@ -142,6 +184,6 @@ Requirements:
             raise
         except json.JSONDecodeError as e:
             logger.error("Groq invalid JSON. Raw output: %r", text[:500])
-            raise AIProviderError(f"Groq returned invalid JSON: {str(e)}")
+            raise AIProviderError(f"Groq returned invalid JSON: {{str(e)}}")
         except Exception as e:
-            raise AIProviderError(f"Groq generate_email failed: {str(e)}")
+            raise AIProviderError(f"Groq generate_email failed: {{str(e)}}")

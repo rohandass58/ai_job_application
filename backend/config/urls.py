@@ -28,7 +28,7 @@ admin.site.index_template = "admin/dashboard_index.html"
 urlpatterns = [
     path("admin/dashboard/", admin_dashboard, name="admin_dashboard"),
     path("admin/", admin.site.urls),
-    path("api/auth/", include("apps.accounts.urls")),
+    path("api/accounts/", include("apps.accounts.urls")),
     path("api/resumes/", include("apps.resumes.urls")),
     path("api/jobs/", include("apps.job_posts.urls")),
     path("api/applications/", include("apps.applications.urls")),

@@ -92,6 +92,7 @@ function renderEditor(app) {
         </div>
 
         <button type="button" class="btn btn-outline btn-block" id="saveBtn">Save draft</button>
+        <button type="button" class="btn btn-secondary btn-block" id="testSendBtn" style="margin-top:8px">📧 Test send to me</button>
         <button type="submit" class="btn btn-primary btn-block" id="sendBtn" style="margin-top:10px">
           ${failed ? "Retry send" : "Send email"}
         </button>
@@ -112,6 +113,38 @@ function renderEditor(app) {
     } catch (err) {
       showToast(err.message || "Could not save", "error");
     } finally {
+      restore();
+    }
+  };
+
+  // Test send to own email
+  $("#testSendBtn").onclick = async () => {
+    const userEmail = (await import("../services/authService.js")).authService.currentUser()?.email;
+    if (!userEmail) {
+      showToast("User email not found", "error");
+      return;
+    }
+    
+    // Pre-fill to_email with user's email if empty
+    if (!$("#toEmail").value.trim()) {
+      $("#toEmail").value = userEmail;
+    }
+    
+    const data = readForm();
+    const problem = validate(data);
+    if (problem) {
+      showToast(problem, "error");
+      return;
+    }
+
+    const restore = setLoading($("#testSendBtn"), "Sending test...");
+    try {
+      await applicationService.update(app.id, data); // save latest edits first
+      const sent = await applicationService.send(app.id);
+      showToast("Test email sent! Check your inbox.", "success");
+      renderSent(sent);
+    } catch (err) {
+      showToast(err.message || "Could not send test email", "error");
       restore();
     }
   };

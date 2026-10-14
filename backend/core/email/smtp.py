@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 from django.core.mail import EmailMessage, get_connection
 from django.conf import settings
 from .base import EmailSender
-from core.exceptions import EmailSendError
+from core.exceptions import EmailDeliveryFailed
 
 
 class SMTPEmailSender(EmailSender):
@@ -62,4 +62,5 @@ class SMTPEmailSender(EmailSender):
             return True
 
         except Exception as e:
-            raise EmailSendError(f"Failed to send email: {str(e)}")
+            # Exception translation: low-level SMTP error → domain exception
+            raise EmailDeliveryFailed(f"Failed to send email: {str(e)}")

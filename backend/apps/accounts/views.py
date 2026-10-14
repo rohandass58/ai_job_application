@@ -5,13 +5,33 @@ from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer,
     TokenRefreshSerializer,
 )
+from django.contrib.auth import get_user_model
 from core.views import BaseAPIView
-from core.exceptions import ValidationError
-from .serializers import RegisterSerializer, UserSerializer, EmailCredentialSerializer, EmailCredentialReadSerializer
-from core.models import EmailCredential
+from core.exceptions import (
+    ValidationError,
+    AuthenticationFailed,
+    TokenExpired,
+)
+from .serializers import (
+    RegisterSerializer,
+    RegisterInitSerializer,
+    VerifyOTPSerializer,
+    ResendOTPSerializer,
+    UserSerializer,
+    EmailCredentialSerializer,
+    EmailCredentialReadSerializer,
+)
+from .services import AccountService, EmailCredentialService
+
+
+User = get_user_model()
 
 
 class RegisterView(BaseAPIView):
+    """
+    Legacy registration endpoint - kept for backward compatibility.
+    New registration should use RegisterInitView -> VerifyOTPView flow.
+    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -22,11 +42,91 @@ class RegisterView(BaseAPIView):
                 errors=serializer.errors
             )
 
-        user = serializer.save()
+        user = AccountService.register_user(**serializer.validated_data)
         return self.success_response(
             data=UserSerializer(user).data,
             message="User registered successfully",
             status_code=201
+        )
+
+
+class RegisterInitView(BaseAPIView):
+    """
+    Step 1: Initiate registration by sending OTP to email.
+    Does NOT create user yet - only sends verification code.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RegisterInitSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise ValidationError(
+                message="Registration failed",
+                errors=serializer.errors
+            )
+
+        data = AccountService.initiate_registration(**serializer.validated_data)
+        return self.success_response(
+            data=data,
+            message="Verification code sent to your email. Please check your inbox."
+        )
+
+
+class VerifyOTPView(BaseAPIView):
+    """
+    Step 2: Verify OTP and create the user account.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = VerifyOTPSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise ValidationError(
+                message="Verification failed",
+                errors=serializer.errors
+            )
+
+        user = AccountService.verify_otp_and_create_user(
+            email=serializer.validated_data["email"],
+            otp_code=serializer.validated_data["otp_code"],
+        )
+
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+
+
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+
+        return self.success_response(
+            data={
+                "user": UserSerializer(user).data,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            },
+            message="Email verified! Account created successfully.",
+            status_code=201
+        )
+
+
+class ResendOTPView(BaseAPIView):
+    """
+    Resend OTP for registration.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ResendOTPSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise ValidationError(
+                message="Resend failed",
+                errors=serializer.errors
+            )
+
+        data = AccountService.resend_otp(serializer.validated_data["email"])
+        return self.success_response(
+            data=data,
+            message="New verification code sent to your email."
         )
 
 
@@ -41,64 +141,61 @@ class LoginView(BaseAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = CustomTokenObtainPairSerializer(data=request.data)
-        if not serializer.is_valid():
-            raise ValidationError(
-                message="Invalid username or password",
-                errors=serializer.errors,
-                status_code=401,
-            )
+        username = request.data.get("username", "").strip()
+
+        # Delegate to service - it raises domain exceptions
+        data = AccountService.authenticate_user(
+            username=username,
+            password=request.data.get("password", "")
+        )
 
         return self.success_response(
-            data=serializer.validated_data,
+            data=data,
             message="Login successful",
         )
-    
+
 
 class RefreshView(BaseAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = TokenRefreshSerializer(data=request.data)
-        if not serializer.is_valid():
-            raise ValidationError(
-                message="Session expired. Please login again.",
-                errors=serializer.errors,
-                status_code=401,
-            )
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            raise ValidationError("Refresh token is required")
 
+        data = AccountService.refresh_token(refresh_token)
         return self.success_response(
-            data=serializer.validated_data,
+            data=data,
             message="Token refreshed",
         )
 
 
 class EmailCredentialView(BaseAPIView):
     """Manage user's own SMTP credentials (Gmail App Password)"""
-    
+
     def get(self, request):
         """Get current email credential (if any)"""
-        try:
-            credential = request.user.email_credential
+        credential = EmailCredentialService.get_credential(request.user)
+        if credential:
             serializer = EmailCredentialReadSerializer(credential)
             return self.success_response(data=serializer.data)
-        except EmailCredential.DoesNotExist:
-            return self.success_response(data=None, message="No email credential configured")
+        return self.success_response(data=None, message="No email credential configured")
 
     def post(self, request):
         """Create or update email credential"""
-        try:
-            credential = request.user.email_credential
-            serializer = EmailCredentialSerializer(credential, data=request.data, partial=True, context={"request": request})
-        except EmailCredential.DoesNotExist:
-            serializer = EmailCredentialSerializer(data=request.data, context={"request": request})
-        
+        serializer = EmailCredentialSerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
             raise ValidationError(message="Invalid data", errors=serializer.errors)
-        
-        serializer.save()
+
+        credential = EmailCredentialService.save_credential(
+            user=request.user,
+            email=serializer.validated_data["email"],
+            password=serializer.validated_data["password"],
+            smtp_host=serializer.validated_data.get("smtp_host", "smtp.gmail.com"),
+            smtp_port=serializer.validated_data.get("smtp_port", 587),
+        )
         return self.success_response(
-            data=EmailCredentialReadSerializer(serializer.instance).data,
+            data=EmailCredentialReadSerializer(credential).data,
             message="Email credential saved successfully"
         )
 
@@ -108,42 +205,17 @@ class EmailCredentialView(BaseAPIView):
 
     def delete(self, request):
         """Delete email credential"""
-        try:
-            credential = request.user.email_credential
-            credential.delete()
-            return self.success_response(message="Email credential deleted")
-        except EmailCredential.DoesNotExist:
-            raise ValidationError(message="No email credential to delete", status_code=404)
+        EmailCredentialService.delete_credential(request.user)
+        return self.success_response(message="Email credential deleted")
 
 
 class EmailCredentialTestView(BaseAPIView):
     """Test email credential by sending a test email"""
-    
+
     def post(self, request):
-        try:
-            credential = request.user.email_credential
-        except EmailCredential.DoesNotExist:
-            raise ValidationError(message="No email credential configured", status_code=404)
-        
         test_email = request.data.get("test_email")
         if not test_email:
             raise ValidationError(message="test_email is required")
-        
-        try:
-            from core.email.factory import get_email_sender
-            sender = get_email_sender(user=request.user)
-            from_name = request.user.get_full_name() or request.user.username
-            
-            sender.send(
-                to_email=test_email,
-                subject="Test Email from JobApply",
-                body=f"Hi {from_name},\n\nThis is a test email from your JobApply account.\nYour Gmail App Password is working correctly!\n\nBest regards,\nJobApply Team",
-                from_name=from_name,
-                reply_to=request.user.email,
-            )
-            # Mark as verified on successful test send
-            credential.is_verified = True
-            credential.save(update_fields=["is_verified"])
-            return self.success_response(message="Test email sent successfully")
-        except Exception as e:
-            raise ValidationError(message=f"Failed to send test email: {str(e)}")
+
+        EmailCredentialService.test_and_verify_credential(request.user, test_email)
+        return self.success_response(message="Test email sent successfully")

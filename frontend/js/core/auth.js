@@ -25,6 +25,19 @@ export async function register(payload) {
   return api.post("/auth/register/", payload, { skipAuthRefresh: true });
 }
 
+// New OTP-based registration flow
+export async function registerInit(payload) {
+  return api.post("/auth/register/init/", payload, { skipAuthRefresh: true });
+}
+
+export async function verifyOTP(email, otpCode) {
+  return api.post("/auth/register/verify/", { email, otp_code: otpCode }, { skipAuthRefresh: true });
+}
+
+export async function resendOTP(email) {
+  return api.post("/auth/register/resend/", { email }, { skipAuthRefresh: true });
+}
+
 export function logout() {
   clearSession();
   window.location.hash = "/login";
